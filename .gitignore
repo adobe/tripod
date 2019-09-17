@@ -3,6 +3,9 @@ data/
 corpus/
 models/
 testing_models/
+dist/
+build/
+*.egg-info/
 .idea/
 .DS*
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
