@@ -32,10 +32,10 @@ from scipy import spatial
 
 for ii in range(len(examples)):
      for jj in range(ii+1, len(examples)):
-         s=1 - spatial.distance.cosine(rez[ii][0], rez[jj][0])
-         s_sum=1 - spatial.distance.cosine(rez[ii][0][0:300], rez[jj][0][0:300])
-         s_gst=1 - spatial.distance.cosine(rez[ii][0][300:600], rez[jj][0][300:600])
-         s_mem=1 - spatial.distance.cosine(rez[ii][0][600:900], rez[jj][0][600:900])
+         s=1 - spatial.distance.cosine(rez[ii], rez[jj])
+         s_sum=1 - spatial.distance.cosine(rez[ii][0:300], rez[jj][0:300])
+         s_gst=1 - spatial.distance.cosine(rez[ii][300:600], rez[jj][300:600])
+         s_mem=1 - spatial.distance.cosine(rez[ii][600:900], rez[jj][600:900])
          print (examples[ii]+'\n\n'+examples[jj])
          print ('{0} {1} {2} {3}'.format(s, s_sum, s_gst, s_mem))
          print('\n\n\n')
