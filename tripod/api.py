@@ -62,12 +62,25 @@ class Tripod(object):
             model_prefix = os.path.join(self._model_store, model_name)
             must_download = force_update or not os.path.exists(model_prefix + '.best') or not os.path.exists(
                 model_prefix + '.encodings')
-
+            model_name_suffixes = ['-aa', '-ab', '-ac', '-ad']
             if must_download:
-                url = "{0}{1}.zip".format(URL_PREFIX, model_name)
-                print(url)
+                # download file parts
+                for model_name_suffix in model_name_suffixes:
+                    url = "{0}{1}.zip{2}".format(URL_PREFIX, model_name, model_name_suffix)
+                    print(url)
+                    download_target = model_prefix + '.zip' + model_name_suffix
+                    self._download_with_progress_bar(url, download_target)
+                    sys.stdout.write('\n')
+
+                # concatenate zip
                 download_target = model_prefix + '.zip'
-                self._download_with_progress_bar(url, download_target)
+                f_out = open(download_target, 'wb')
+                for model_name_suffix in model_name_suffixes:
+                    download_part = model_prefix + '.zip' + model_name_suffix
+                    f_in = open(download_part, 'rb')
+                    f_out.write(f_in.read())
+                    f_in.close()
+                f_out.close()
                 zipfile = ZipFile(download_target, "r")
                 zipfile.extractall(self._model_store)
                 zipfile.close()
@@ -93,13 +106,13 @@ class Tripod(object):
             for seq in seqs:
                 if self._bpe is not None:
                     data = self._bpe.tokenize(seq)
-                else: 
+                else:
                     data = seq
                 batch_x = [data]
                 batch_x = self._to_tensor(batch_x, self._encodings, self._device)
                 if not encode_decode:
                     representation = self._model.compute_repr(batch_x)
-                    output_list.append(np.asarray(representation.cpu().numpy()))
+                    output_list.append(np.asarray(representation.cpu().squeeze(0).numpy()))
                 else:
                     pred_sum, pred_gst, pred_mem = self._model.generate(batch_x)
 
