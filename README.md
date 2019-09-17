@@ -6,6 +6,8 @@ Tripod is a tool/ML model for computing latent representations for large sequenc
 * Information/code indexing and retrieval
 * Anomaly Detection/ Unsupervised Learning
 
+**For a quick demo** you can try the [Colaboratory Notebook with GPU acceleration](https://colab.research.google.com/drive/1_Qb8-KgIlpXwNtN5TdmBikEelN7djWaL). If you want to modify the text, open the Notebook in playground mode.
+
 Link to white paper will be available soon.
 
 
@@ -13,15 +15,20 @@ Link to white paper will be available soon.
 
 ## Quick start guide
 
-We are working on generating a pip package installer and on providing pre-trained models on common datasets. We will update this section accordingly.
-Right now you will have to manually clone this repo and add the path to python.
+The fastest way to get started with Tripod is to use the precompiled PIP package. Make sure you have python3 and pip installed and use the following command:
+
+```bash
+$ pip3 install tripod-ml
+```
 
 Requirements:
 * python3 
 * installed dependencies (requirements.txt)
 ## Usage
 
-Tripod comes with an easy to use API. After downloading the pip package or 
+Tripod comes with an easy to use API. After downloading the pip package:
+
+
 ```python
 from tripod.api import Tripod
 tripod=Tripod()
