@@ -76,11 +76,13 @@ The city proper is administratively known as the "City"), and has the same admin
 -0.7460803985595703 -0.958350658416748 0.36185234785079956 0.5165910124778748
 ```
 
+The four values represent: overall cosine distance, summary-based cosine distance, GST-based cosine distance and memory-based cosine distance. 
+
+
 ## Training you own models
 
 This chapter is still under development
 
-The four values represent: overall cosine distance, summary-based cosine distance, GST-based cosine distance and memory-based cosine distance. 
 ### Licensing
 
 This project is licensed under the Apache V2 License. See [LICENSE](LICENSE) for more information.
