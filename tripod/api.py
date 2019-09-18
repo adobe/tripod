@@ -119,7 +119,7 @@ class Tripod(object):
             if len(batch) == batch_size:
                 batch = self._autopad(batch)
                 batches.append(batch)
-                batch = 0
+                batch = []
 
         if len(batch) != 0:
             batch = self._autopad(batch)
