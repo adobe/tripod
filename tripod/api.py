@@ -105,7 +105,7 @@ class Tripod(object):
         for seq in batch:
             n = len(seq)
             for ii in range(max_len - n):
-                seq.append(self._encodings['<PAD>'])
+                seq.append('<PAD>')
         # only reason to do this is to make it obvious that batch changes in _make_batches
         return batch
 
