@@ -100,19 +100,42 @@ class Tripod(object):
         except:
             return False
 
-    def __call__(self, seqs, encode_decode=False):
+    def _autopad(self, batch):
+        max_len = max([len(seq) for seq in batch])
+        for seq in batch:
+            n = len(seq)
+            for ii in range(max_len - n):
+                seq.append(self._encodings['<PAD>'])
+        # only reason to do this is to make it obvious that batch changes in _make_batches
+        return batch
+
+    def _make_batches(self, seqs, batch_size=16):
+        batches = []
+        batch = []
+        for seq in seqs:
+            if self._bpe is not None:
+                seq = self._bpe.tokenize(seq)
+            batch.append(seq)
+            if len(batch) == batch_size:
+                batch = self._autopad(batch)
+                batches.append(batch)
+                batch = 0
+
+        if len(batch) != 0:
+            batch = self._autopad(batch)
+            batches.append(batch)
+
+        return self._to_tensor(batch, self._encodings, self._device)
+
+    def __call__(self, seqs, encode_decode=False, batch_size=16):
         output_list = []
         with torch.no_grad():
-            for seq in seqs:
-                if self._bpe is not None:
-                    data = self._bpe.tokenize(seq)
-                else:
-                    data = seq
-                batch_x = [data]
-                batch_x = self._to_tensor(batch_x, self._encodings, self._device)
+            batches=self._make_batches(seqs)
+            for batch_x in batches:
                 if not encode_decode:
                     representation = self._model.compute_repr(batch_x)
-                    output_list.append(np.asarray(representation.cpu().squeeze(0).numpy()))
+                    for vec in representation:
+                        output_list.append(np.asarray(vec.cpu().squeeze(0).numpy()))
                 else:
                     pred_sum, pred_gst, pred_mem = self._model.generate(batch_x)
 
