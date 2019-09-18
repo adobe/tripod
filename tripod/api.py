@@ -130,7 +130,7 @@ class Tripod(object):
     def __call__(self, seqs, encode_decode=False, batch_size=16):
         output_list = []
         with torch.no_grad():
-            batches=self._make_batches(seqs)
+            batches = self._make_batches(seqs)
             for batch_x in batches:
                 if not encode_decode:
                     representation = self._model.compute_repr(batch_x)
@@ -183,7 +183,7 @@ class Tripod(object):
 
     @staticmethod
     def _to_tensor(x, encodings, device):
-        x_int = []
+        batch = []
         for seq in x:
             cs = []
             for token in seq:
@@ -191,8 +191,8 @@ class Tripod(object):
                     cs.append(encodings.token2int[token])
                 else:
                     cs.append(encodings.token2int['<UNK>'])
-            x_int.append(cs)
-        return torch.tensor(x_int, device=device)
+            batch.append(cs)
+        return torch.tensor([batch], device=device)
 
     @staticmethod
     def _bpe_decode(tokens, encoder):
