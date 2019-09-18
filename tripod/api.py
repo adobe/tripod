@@ -125,7 +125,7 @@ class Tripod(object):
             batch = self._autopad(batch)
             batches.append(batch)
 
-        return self._to_tensor(batch, self._encodings, self._device)
+        return self._to_tensor(batches, self._encodings, self._device)
 
     def __call__(self, seqs, encode_decode=False, batch_size=16):
         output_list = []
@@ -183,16 +183,19 @@ class Tripod(object):
 
     @staticmethod
     def _to_tensor(x, encodings, device):
-        batch = []
-        for seq in x:
-            cs = []
-            for token in seq:
-                if token in encodings.token2int:
-                    cs.append(encodings.token2int[token])
-                else:
-                    cs.append(encodings.token2int['<UNK>'])
-            batch.append(cs)
-        return torch.tensor([batch], device=device)
+        batches = []
+        for batch in x:
+            cb = []
+            for seq in batch:
+                cs = []
+                for token in seq:
+                    if token in encodings.token2int:
+                        cs.append(encodings.token2int[token])
+                    else:
+                        cs.append(encodings.token2int['<UNK>'])
+                cb.append(cs)
+            batches.append(cb)
+        return torch.tensor(batches, device=device)
 
     @staticmethod
     def _bpe_decode(tokens, encoder):
