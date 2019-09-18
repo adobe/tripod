@@ -100,16 +100,23 @@ class Tripod(object):
         except:
             return False
 
-    def _autopad(self, batch):
-        max_len = max([len(seq) for seq in batch])
+    def _autopad(self, batch, max_seq_len):
+        if max_seq_len == -1:
+            max_len = max([len(seq) for seq in batch])
+        else:
+            max_len = max_seq_len
+        new_batch = []
         for seq in batch:
             n = len(seq)
             for ii in range(max_len - n):
                 seq.append('<PAD>')
+            if len(seq) > max_len:
+                seq = seq[:max_len]
+            new_batch.append(seq)
         # only reason to do this is to make it obvious that batch changes in _make_batches
-        return batch
+        return new_batch
 
-    def _make_batches(self, seqs, batch_size=16):
+    def _make_batches(self, seqs, batch_size=16, max_seq_len=500):
         batches = []
         batch = []
         for seq in seqs:
@@ -117,20 +124,20 @@ class Tripod(object):
                 seq = self._bpe.tokenize(seq)
             batch.append(seq)
             if len(batch) == batch_size:
-                batch = self._autopad(batch)
-                batches.append(batch)
+                batch = self._autopad(batch, max_seq_len)
+                batches.append(self._to_tensor(batch, self._encodings, self._device))
                 batch = []
 
         if len(batch) != 0:
-            batch = self._autopad(batch)
-            batches.append(batch)
+            batch = self._autopad(batch, max_seq_len)
+            batches.append(self._to_tensor(batch, self._encodings, self._device))
 
-        return self._to_tensor(batches, self._encodings, self._device)
+        return batches
 
-    def __call__(self, seqs, encode_decode=False, batch_size=16):
+    def __call__(self, seqs, encode_decode=False, batch_size=16, max_seq_len=500):
         output_list = []
         with torch.no_grad():
-            batches = self._make_batches(seqs, batch_size=batch_size)
+            batches = self._make_batches(seqs, batch_size=batch_size, max_seq_len=500)
             for batch_x in batches:
                 if not encode_decode:
                     representation = self._model.compute_repr(batch_x)
@@ -183,19 +190,18 @@ class Tripod(object):
 
     @staticmethod
     def _to_tensor(x, encodings, device):
-        batches = []
-        for batch in x:
-            cb = []
-            for seq in batch:
-                cs = []
-                for token in seq:
-                    if token in encodings.token2int:
-                        cs.append(encodings.token2int[token])
-                    else:
-                        cs.append(encodings.token2int['<UNK>'])
-                cb.append(cs)
-            batches.append(cb)
-        return torch.tensor(batches, device=device)
+        cb = []
+
+        for seq in x:
+            cs = []
+            for token in seq:
+                if token in encodings.token2int:
+                    cs.append(encodings.token2int[token])
+                else:
+                    cs.append(encodings.token2int['<UNK>'])
+            cb.append(cs)
+
+        return torch.tensor(cb, device=device)
 
     @staticmethod
     def _bpe_decode(tokens, encoder):
