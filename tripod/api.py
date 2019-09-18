@@ -130,7 +130,7 @@ class Tripod(object):
     def __call__(self, seqs, encode_decode=False, batch_size=16):
         output_list = []
         with torch.no_grad():
-            batches = self._make_batches(seqs)
+            batches = self._make_batches(seqs, batch_size=batch_size)
             for batch_x in batches:
                 if not encode_decode:
                     representation = self._model.compute_repr(batch_x)
