@@ -51,30 +51,30 @@ for ii in range(len(examples)):
 The output should look like this:
 
 ```text
+Execution time took 0.7646613121032715 seconds
 Science (from the Latin word scientia, meaning "knowledge")[1] is a systematic enterprise that builds and organizes knowledge in the form of testable explanations and predictions about the universe.
 Their contributions to mathematics, astronomy, and medicine entered and shaped Greek natural philosophy of classical antiquity, whereby formal attempts were made to provide explanations of events in the physical world based on natural causes
-0.9855362772941589 0.9855527281761169 0.9999992847442627 0.9999362826347351
+0.7309989929199219 0.7803457379341125 0.3567299246788025 0.35346105694770813
 
 Science (from the Latin word scientia, meaning "knowledge")[1] is a systematic enterprise that builds and organizes knowledge in the form of testable explanations and predictions about the universe.
 Bucharest is the capital and largest city of Romania, as well as its cultural, industrial, and financial centre. It is located in the southeast of the country
--0.8141930103302002 -0.9598744511604309 0.8627750873565674 0.8763532042503357
+-0.5788195133209229 -0.7110175490379333 0.7020860314369202 0.8736361265182495
 
 Science (from the Latin word scientia, meaning "knowledge")[1] is a systematic enterprise that builds and organizes knowledge in the form of testable explanations and predictions about the universe.
 The city proper is administratively known as the "City"), and has the same administrative level as that of a national county, being further subdivided into six sectors, each governed by a local mayor.
--0.813877522945404 -0.9543831944465637 0.7057918310165405 0.5757448673248291
+-0.27698490023612976 -0.503406822681427 0.9999860525131226 0.8280588984489441
 
 Their contributions to mathematics, astronomy, and medicine entered and shaped Greek natural philosophy of classical antiquity, whereby formal attempts were made to provide explanations of events in the physical world based on natural causes
 Bucharest is the capital and largest city of Romania, as well as its cultural, industrial, and financial centre. It is located in the southeast of the country
--0.8484337329864502 -0.9655283689498901 0.8628923892974854 0.8798920512199402
+-0.439662367105484 -0.4755406975746155 -0.19494909048080444 -0.06704480201005936
 
 Their contributions to mathematics, astronomy, and medicine entered and shaped Greek natural philosophy of classical antiquity, whereby formal attempts were made to provide explanations of events in the physical world based on natural causes
 The city proper is administratively known as the "City"), and has the same administrative level as that of a national county, being further subdivided into six sectors, each governed by a local mayor.
--0.8573421239852905 -0.9712408185005188 0.705249011516571 0.568310558795929
+-0.20391632616519928 -0.3391631841659546 0.3518427908420563 0.65208500623703
 
 Bucharest is the capital and largest city of Romania, as well as its cultural, industrial, and financial centre. It is located in the southeast of the country
 The city proper is administratively known as the "City"), and has the same administrative level as that of a national county, being further subdivided into six sectors, each governed by a local mayor.
-0.9749458432197571 0.9925230145454407 0.48334062099456787 0.39682143926620483
-
+0.6992307305335999 0.7146259546279907 0.7043308615684509 0.49322831630706787
 ```
 
 The four values represent: overall cosine distance, summary-based cosine distance, GST-based cosine distance and memory-based cosine distance. 
