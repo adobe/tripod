@@ -1,4 +1,4 @@
-# Tripod
+# Tripod :star:
 
 Tripod is a tool/ML model for computing latent representations for large sequences. It has been used on source code and text and it has applications such as:
 * Malicious code detection
