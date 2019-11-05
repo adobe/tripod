@@ -1,6 +1,6 @@
 import sys
 if len(sys.argv)<2:
-    print("Usage: split_corpus.py <source> <train> <dev>"
+    print("Usage: split_corpus.py <source> <train> <dev>")
     sys.exit(0)
 f_train=open(sys.argv[2], 'w')
 f_dev=open(sys.argv[3],'w')
