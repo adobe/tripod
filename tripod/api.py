@@ -23,7 +23,7 @@ import torch
 import numpy as np
 
 sys.path.append('')
-from tripod.model import TripodModel
+from tripod.networks.tripod2 import TripodModel2
 from bpe.encoder import Encoder as BPEEncoder
 from tripod.io_utils.io import Encodings
 from pathlib import Path
@@ -91,7 +91,7 @@ class Tripod(object):
 
             self._encodings = Encodings()
             self._encodings.load(model_prefix + '.encodings')
-            self._model = TripodModel(self._encodings)
+            self._model = TripodModel2(self._encodings)
             self._model.load(model_prefix + '.best')
             self._model.to(self._device)
             self._model.eval()
