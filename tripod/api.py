@@ -144,30 +144,18 @@ class Tripod(object):
                     for vec in representation:
                         output_list.append(np.asarray(vec.cpu().squeeze(0).numpy()))
                 else:
-                    pred_sum, pred_gst, pred_mem = self._model.generate(batch_x)
+                    pred_sum = self._model.generate(batch_x)
 
                     val_sum = pred_sum.cpu().numpy()
-                    val_gst = pred_gst.cpu().numpy()
-                    val_mem = pred_mem.cpu().numpy()
                     for seq_id in range(pred_sum.shape[0]):
                         if self._bpe is not None:
                             token_list_sum = [self._encodings.token_list[zz] for zz in val_sum[seq_id] if
                                               zz != self._encodings.token2int['<UNK>']]
-                            token_list_gst = [self._encodings.token_list[zz] for zz in val_gst[seq_id] if
-                                              zz != self._encodings.token2int['<UNK>']]
-                            token_list_mem = [self._encodings.token_list[zz] for zz in val_mem[seq_id] if
-                                              zz != self._encodings.token2int['<UNK>']]
-                            output_list.append([self._bpe_decode(token_list_sum, self._bpe),
-                                                self._bpe_decode(token_list_gst, self._bpe),
-                                                self._bpe_decode(token_list_mem, self._bpe)])
+                            output_list.append(self._bpe_decode(token_list_sum, self._bpe))
                         else:
                             t_sum = ''.join([self._encodings.token_list[val_sum[seq_id][t_id]] for t_id in
                                              range(pred_sum.shape[1])])
-                            t_mem = ''.join([self._encodings.token_list[val_mem[seq_id][t_id]] for t_id in
-                                             range(pred_sum.shape[1])])
-                            t_gst = ''.join([self._encodings.token_list[val_gst[seq_id][t_id]] for t_id in
-                                             range(pred_sum.shape[1])])
-                            output_list.append([t_sum, t_gst, t_mem])
+                            output_list.append(t_sum)
 
         return output_list
 

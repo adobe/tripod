@@ -87,14 +87,15 @@ class TripodModel2(nn.Module):
         att_sum, cond_sum = self.attn_sum(hidden, output)
         att_gst, cond_gst = self.attn_gst(hidden)
         att_mem, cond_mem = self.attn_mem(hidden)
-        cond_sum_ext = cond_sum.unsqueeze(1).repeat(1, x.shape[1], 1)
-        cond_gst_ext = cond_gst.unsqueeze(1).repeat(1, x.shape[1], 1)
-        cond_mem_ext = cond_mem.unsqueeze(1).repeat(1, x.shape[1], 1)
+        cond_sum_ext = cond_sum.unsqueeze(1)#.re, 1)
+        cond_gst_ext = cond_gst.unsqueeze(1)#.repeat(1, x.shape[1], 1)
+        cond_mem_ext = cond_mem.unsqueeze(1)#.repeat(1, x.shape[1], 1)
 
         cond = torch.relu(torch.cat([cond_sum_ext, cond_gst_ext, cond_mem_ext],
                                     dim=2))
         y_list = []
         hidden = None
+        inp = x[0:, 0].unsqueeze(1)
         for ii in range(x.shape[1]):
             out, hidden = self.decoder(inp, cond, hidden=hidden)
             inp = []
