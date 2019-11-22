@@ -5,6 +5,7 @@ models/
 testing_models/
 dist/
 build/
+*.txt
 *.egg-info/
 .idea/
 .DS*

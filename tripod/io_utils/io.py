@@ -86,6 +86,7 @@ class Dataset:
             elif type == 'token':
                 self.sequences = []
                 for line in f.readlines():
+                    line = line.strip().replace('\n', '')
                     self.sequences.append(line.split(' '))
             else:
                 print("Byte pair encodings is not supported yet")
