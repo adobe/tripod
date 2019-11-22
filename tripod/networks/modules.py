@@ -109,7 +109,7 @@ class DecoderLSTM(nn.Module):
 
     def forward(self, input_tokens, conditioning_vect, hidden=None, partition_dropout=False):
         embedded = self.dropout(self.embedding(input_tokens))
-        conditioning_vect = conditioning_vect.unsqueeze(1).repeat(1, input_tokens.shape[1], 1)
+
         if partition_dropout:
             if self.training:
                 mask_x = []

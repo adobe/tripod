@@ -24,150 +24,14 @@ import tqdm
 import numpy as np
 
 sys.path.append('')
-from tripod.networks.modules import Encoder, DecoderLSTM, Attention, AttentionGST, AttentionMemory
 
-
-class TripodModel(nn.Module):
-    def __init__(self, encodings, embeddings_size=300, encoder_size=300, encoder_layers=2, decoder_size=300,
-                 decoder_layers=1,
-                 num_gst=20, num_cells=50, cell_size=300, dropout=0.5):
-        super(TripodModel, self).__init__()
-        self.encodings = encodings
-
-        self.encoder_sum = Encoder(embeddings_size, encoder_size * 2, encoder_size=encoder_size, dropout=dropout,
-                                   nn_type=nn.LSTM, encoder_layers=encoder_layers)
-        self.attn_sum = Attention(encoder_size, encoder_size * 2, embeddings_size)
-        self.decoder_sum = DecoderLSTM(embeddings_size, len(encodings.token2int), decoder_size, dropout=dropout,
-                                       nn_type=nn.LSTM, decoder_layers=decoder_layers)
-
-        self.encoder_gst = Encoder(embeddings_size, encoder_size * 2, encoder_size=encoder_size, dropout=dropout,
-                                   nn_type=nn.LSTM, encoder_layers=encoder_layers)
-        self.attn_gst = AttentionGST(embeddings_size, encoder_size * 2, num_gst, embeddings_size)
-        self.decoder_gst = DecoderLSTM(embeddings_size, len(encodings.token2int), decoder_size, dropout=dropout,
-                                       nn_type=nn.LSTM, decoder_layers=decoder_layers)
-
-        self.encoder_mem = Encoder(embeddings_size, encoder_size * 2, encoder_size=encoder_size, dropout=dropout,
-                                   nn_type=nn.LSTM, encoder_layers=encoder_layers)
-        self.attn_mem = AttentionMemory(cell_size, encoder_size * 2, num_gst, num_cells, embeddings_size)
-        self.decoder_mem = DecoderLSTM(embeddings_size, len(encodings.token2int), decoder_size, dropout=dropout,
-                                       nn_type=nn.LSTM, decoder_layers=decoder_layers)
-        self.embedding = nn.Embedding(len(encodings.token2int), embeddings_size)
-
-        # LSTM initialization
-        for name, param in self.named_parameters():
-            if "weight_hh" in name:
-                nn.init.orthogonal_(param.data)
-            elif "weight_ih" in name:
-                nn.init.xavier_uniform_(param.data)
-            elif "bias" in name and "rnn" in name:  # forget bias
-                nn.init.zeros_(param.data)
-                param.data[param.size()[0] // 4:param.size()[0] // 2] = 1
-
-    def forward(self, x, return_attentions=False, partition_dropout=False):
-        input_emb = self.embedding(x)
-        # summary-based embeddings
-        output_sum, hidden_sum = self.encoder_sum(input_emb)
-        att_sum, cond_sum = self.attn_sum(hidden_sum, output_sum)
-        out_sum, hidden_sum = self.decoder_sum(x, cond_sum, partition_dropout=partition_dropout)
-
-        # GST-based embeddings
-        output_gst, hidden_gst = self.encoder_gst(input_emb)
-        att_gst, cond_gst = self.attn_gst(hidden_gst)
-        out_gst, hidden_gst = self.decoder_gst(x, cond_gst, partition_dropout=partition_dropout)
-
-        # MEM-based embeddings
-        output_mem, hidden_mem = self.encoder_mem(input_emb)
-        att_mem, cond_mem = self.attn_mem(hidden_mem)
-        out_mem, hidden_mem = self.decoder_mem(x, cond_mem, partition_dropout=partition_dropout)
-        if not return_attentions:
-            return out_sum, out_gst, out_mem
-        else:
-            return out_sum, out_gst, out_mem, att_sum, att_gst, att_mem, cond_sum, cond_gst, cond_mem
-
-    def compute_repr(self, x):
-        input_emb = self.embedding(x)
-        # summary-based embeddings
-        output_sum, hidden_sum = self.encoder_sum(input_emb)
-        att, cond_sum = self.attn_sum(hidden_sum, output_sum)
-        # GST-based embeddings
-        output_gst, hidden_gst = self.encoder_gst(input_emb)
-        att, cond_gst = self.attn_gst(hidden_gst)
-        # from ipdb import set_trace
-        # set_trace()
-
-        # MEM-based embeddings
-        output_mem, hidden_mem = self.encoder_mem(input_emb)
-        att, cond_mem = self.attn_mem(hidden_mem)
-        return torch.cat((cond_sum, cond_gst, cond_mem), dim=1)
-
-    def generate(self, x):
-        input_emb = self.embedding(x)
-        # summary-based embeddings
-        output_sum, hidden_sum = self.encoder_sum(input_emb)
-        att, cond_sum = self.attn_sum(hidden_sum, output_sum)
-        hidden_sum = None
-        inp = x[0:, 0].unsqueeze(1)
-        y_sum_list = []
-
-        for ii in range(x.shape[1]):
-            out_sum, hidden_sum = self.decoder_sum(inp, cond_sum, hidden=hidden_sum)
-            inp = []
-            for tt in range(x.shape[0]):
-                inp.append(torch.softmax(out_sum[tt, 0, :], dim=0).multinomial(1).unsqueeze(0))
-            inp = torch.cat(inp, dim=0)
-            y_sum_list.append(inp)
-
-        y_sum_list = torch.cat(y_sum_list, dim=1)
-
-        # GST-based embeddings
-        output_gst, hidden_gst = self.encoder_gst(input_emb)
-        att, cond_gst = self.attn_gst(hidden_gst)
-        hidden_gst = None
-        inp = x[0:, 0].unsqueeze(1)
-        y_gst_list = []
-
-        for ii in range(x.shape[1]):
-            out_gst, hidden_gst = self.decoder_gst(inp, cond_gst, hidden=hidden_gst)
-            inp = []
-            for tt in range(x.shape[0]):
-                inp.append(torch.softmax(out_gst[tt, 0, :], dim=0).multinomial(1).unsqueeze(0))
-            inp = torch.cat(inp, dim=0)
-            y_gst_list.append(inp)
-
-        y_gst_list = torch.cat(y_gst_list, dim=1)
-
-        # MEM-based embeddings
-        output_mem, hidden_mem = self.encoder_mem(input_emb)
-        att, cond_mem = self.attn_mem(hidden_mem)
-        hidden_mem = None
-        inp = x[0:, 0].unsqueeze(1)
-        y_mem_list = []
-
-        for ii in range(x.shape[1]):
-            out_mem, hidden_mem = self.decoder_mem(inp, cond_mem, hidden=hidden_mem)
-            inp = []
-            for tt in range(x.shape[0]):
-                inp.append(torch.softmax(out_mem[tt, 0, :], dim=0).multinomial(1).unsqueeze(0))
-            inp = torch.cat(inp, dim=0)
-            y_mem_list.append(inp)
-
-        y_mem_list = torch.cat(y_mem_list, dim=1)
-
-        return y_sum_list, y_gst_list, y_mem_list
-
-    def save(self, path):
-        torch.save(self.state_dict(), path)
-
-    def load(self, path):
-        self.load_state_dict(torch.load(path, map_location='cpu'))
+from tripod.networks.tripod2 import TripodModel2
 
 
 def _eval(model, batches, criterion, encodings):
     model.eval()
     total_loss = 0
     total_sum = 0
-    total_gst = 0
-    total_mem = 0
     with torch.no_grad():
         pgb = tqdm.tqdm(batches, ncols=80, desc='\tEvaluating loss=NaN')
         cnt = 0
@@ -181,22 +45,16 @@ def _eval(model, batches, criterion, encodings):
             batch_x = _to_tensor(batch_x, encodings, params.device)
             batch_y = _to_tensor(batch_y, encodings, params.device)
 
-            pred_sum, pred_gst, pred_mem = model(batch_x)
+            pred_sum = model(batch_x)
             loss_sum = criterion(pred_sum.contiguous().view(pred_sum.shape[0] * pred_sum.shape[1], pred_sum.shape[2]),
                                  batch_y.view(-1))
-            loss_gst = criterion(pred_gst.contiguous().view(pred_gst.shape[0] * pred_gst.shape[1], pred_gst.shape[2]),
-                                 batch_y.view(-1))
-            loss_mem = criterion(pred_mem.contiguous().view(pred_mem.shape[0] * pred_mem.shape[1], pred_mem.shape[2]),
-                                 batch_y.view(-1))
 
-            loss_tot = loss_sum + loss_gst + loss_mem
+            loss_tot = loss_sum
             total_loss += loss_tot.item()
             total_sum += loss_sum.item()
-            total_gst += loss_gst.item()
-            total_mem += loss_mem.item()
 
             pgb.set_description(desc='\tEvaluating loss={0:.5f}   '.format(total_loss / cnt))
-    return total_sum / cnt, total_gst / cnt, total_mem / cnt
+    return total_sum / cnt
 
 
 def _get_batches(dataset, params):
@@ -260,7 +118,7 @@ def generate_repr(params):
     if params.bpe_encoder is not None:
         from bpe import Encoder as BPEEncoder
         bpe_encoder = BPEEncoder.load(params.bpe_encoder)
-    model = TripodModel(encodings)
+    model = TripodModel2(encodings)
     model.load(params.output + '.bestGST')
     model.to(params.device)
     model.eval()
@@ -295,7 +153,7 @@ def run_tripod(params):
     dataset = Dataset(params.input_file)
     encodings = Encodings()
     encodings.load(params.output + '.encodings')
-    model = TripodModel(encodings)
+    model = TripodModel2(encodings)
     model.load(params.output + '.bestGST')
     model.to(params.device)
     model.eval()
@@ -329,30 +187,23 @@ def run_tripod(params):
                     orig = tmp
                 batch_x = _to_tensor([batch_x], encodings, params.device)
 
-                pred_sum, pred_gst, pred_mem = model.generate(batch_x)
+                pred_sum = model.generate(batch_x)
 
                 val_sum = pred_sum.cpu().numpy()
-                val_gst = pred_gst.cpu().numpy()
-                val_mem = pred_mem.cpu().numpy()
+
                 for seq_id in range(pred_sum.shape[0]):
                     if bpe_encoder is not None:
                         token_list_sum = [encodings.token_list[zz] for zz in val_sum[seq_id] if
                                           zz != encodings.token2int['<UNK>']]
-                        token_list_gst = [encodings.token_list[zz] for zz in val_gst[seq_id] if
-                                          zz != encodings.token2int['<UNK>']]
-                        token_list_mem = [encodings.token_list[zz] for zz in val_mem[seq_id] if
-                                          zz != encodings.token2int['<UNK>']]
                         sys.stdout.write('ORIG: ' + orig + '\n\n')
                         sys.stdout.write('SUM: ' + _bpe_decode(token_list_sum, bpe_encoder) + '\n\n')
-                        sys.stdout.write('GST: ' + _bpe_decode(token_list_gst, bpe_encoder) + '\n\n')
-                        sys.stdout.write('MEM: ' + _bpe_decode(token_list_mem, bpe_encoder) + '\n\n')
                         token_list = token_list_sum
                         sys.stdout.write('=' * 20)
                         sys.stdout.write('\n\n\n')
                     else:
                         for t_id in range(pred_sum.shape[1]):
-                            token_list += encodings.token_list[val_mem[seq_id][t_id]]
-                            sys.stdout.write(encodings.token_list[val_mem[seq_id][t_id]])
+                            token_list += encodings.token_list[val_sum[seq_id][t_id]]
+                            sys.stdout.write(encodings.token_list[val_sum[seq_id][t_id]])
                             sys.stdout.flush()
 
                         sys.stdout.write('\n')
@@ -410,7 +261,7 @@ def train_tripod(params):
 
     sys.stdout.flush()
 
-    model = TripodModel(encodings, num_gst=params.num_gst)
+    model = TripodModel2(encodings, num_gst=params.num_gst)
     model.to(params.device)
 
     patience_left = params.patience
@@ -421,10 +272,10 @@ def train_tripod(params):
     criterion = CrossEntropyLoss(ignore_index=encodings.token2int['<PAD>'])
     criterion_nll = NLLLoss()
     optimizer = Adam(model.parameters(), lr=params.lr, betas=(params.beta1, params.beta2))
-    # best_sum, best_gst, best_mem = _eval(model, dev_batches, criterion, encodings)
-    best_sum, best_gst, best_mem = 9999, 9999, 9999
+    best_sum = _eval(model, dev_batches, criterion, encodings)
+    best_sum = 9999
     sys.stdout.write(
-        '\n\tDevset evaluation: summary_loss={0}, gst_loss={1}, mem_loss={2}\n'.format(best_sum, best_gst, best_mem))
+        '\n\tDevset evaluation: summary_loss={0}\n'.format(best_sum))
     sys.stdout.flush()
     while patience_left > 0:
         model.train()
@@ -450,15 +301,10 @@ def train_tripod(params):
             batch_x = _to_tensor(batch_x, encodings, params.device)
             batch_y = _to_tensor(batch_y, encodings, params.device)
 
-            pred_sum, pred_gst, pred_mem, _, att_gst, att_mem, cond_sum, cond_gst, cond_mem = model(batch_x,
-                                                                                                    return_attentions=True,
-                                                                                                    partition_dropout=params.partition_dropout)
-
+            pred_sum, _, att_gst, att_mem, cond_sum, cond_gst, cond_mem = model(batch_x,
+                                                                                return_attentions=True,
+                                                                                partition_dropout=params.partition_dropout)
             loss_sum = criterion(pred_sum.contiguous().view(pred_sum.shape[0] * pred_sum.shape[1], pred_sum.shape[2]),
-                                 batch_y.view(-1))
-            loss_gst = criterion(pred_gst.contiguous().view(pred_gst.shape[0] * pred_gst.shape[1], pred_gst.shape[2]),
-                                 batch_y.view(-1))
-            loss_mem = criterion(pred_mem.contiguous().view(pred_mem.shape[0] * pred_mem.shape[1], pred_mem.shape[2]),
                                  batch_y.view(-1))
 
             loss_cosine_list = []
@@ -481,9 +327,7 @@ def train_tripod(params):
             loss_att_mem = sum(
                 -torch.log(torch.clamp(a_mem[c_x], min=eps)) for a_mem, c_x in zip(att_mem, class_x)) / len(class_x)
 
-            # from ipdb import set_trace
-            # set_trace()
-            loss_tot = loss_sum + loss_gst + loss_mem + (loss_att_gst + loss_att_mem) * 0.2 + loss_cosine * 0.6
+            loss_tot = loss_sum + (loss_att_gst + loss_att_mem) * 0.2 + loss_cosine * 0.6
             total_loss += loss_tot.item()
             pgb.set_description(desc='\tTraining loss={0:.5f}   '.format(total_loss / cnt))
             optimizer.zero_grad()
@@ -493,29 +337,14 @@ def train_tripod(params):
 
         sys.stdout.write('\n\tTraiset loss is {0:.5f}\n'.format(total_loss / (len(train_batches))))
         sys.stdout.flush()
-        lss_sum, lss_gst, lss_mem = _eval(model, dev_batches, criterion, encodings)
+        lss_sum = _eval(model, dev_batches, criterion, encodings)
         sys.stdout.write(
-            '\n\tDevset evaluation: summary_loss={0}, gst_loss={1}, mem_loss={2}\n'.format(lss_sum, lss_gst, lss_mem))
+            '\n\tDevset evaluation: loss={0}\n'.format(lss_sum))
         sys.stdout.flush()
         if best_sum is None or lss_sum < best_sum:
             best_sum = lss_sum
             patience_left = params.patience
-            path = params.output + '.bestSUM'
-            sys.stdout.write('\tStoring {0}\n'.format(path))
-            sys.stdout.flush()
-            model.save(path)
-        if best_gst is None or lss_gst < best_gst:
-            best_gst = lss_gst
-            patience_left = params.patience
-            path = params.output + '.bestGST'
-            sys.stdout.write('\tStoring {0}\n'.format(path))
-            sys.stdout.flush()
-            model.save(path)
-
-        if best_mem is None or lss_mem < best_mem:
-            best_mem = lss_mem
-            patience_left = params.patience
-            path = params.output + '.bestMEM'
+            path = params.output + '.best'
             sys.stdout.write('\tStoring {0}\n'.format(path))
             sys.stdout.flush()
             model.save(path)
@@ -555,8 +384,8 @@ if __name__ == '__main__':
                       help='Generate using learned autoencoder')
     parser.add_option('--compute', action='store_true', dest='compute',
                       help='Compute the representation for an input file')
-    parser.add_option('--input-type', action='store', dest='input_type',
-                      help='Input type: character, token, bpe (default=character)',
+    parser.add_option('--input-type', action='store', dest='input_type', default='token',
+                      help='Input type: character, token, bpe (default=token)',
                       choices=['character', 'token'])
     parser.add_option('--bpe-encoder', action='store', dest='bpe_encoder',
                       help='Location for the BPE encoder')
