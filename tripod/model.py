@@ -272,7 +272,7 @@ def train_tripod(params):
     criterion = CrossEntropyLoss(ignore_index=encodings.token2int['<PAD>'])
     criterion_nll = NLLLoss()
     optimizer = Adam(model.parameters(), lr=params.lr, betas=(params.beta1, params.beta2))
-    best_sum = _eval(model, dev_batches, criterion, encodings)
+    #best_sum = #_eval(model, dev_batches, criterion, encodings)
     best_sum = 9999
     sys.stdout.write(
         '\n\tDevset evaluation: summary_loss={0}\n'.format(best_sum))
