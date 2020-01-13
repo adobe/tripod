@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tripod-ml",
-    version="0.1.0.4",
+    version="0.2.0.0",
     author="Multiple authors",
     author_email="tiberiu44@gmail.com",
     description="Machine Learning tool for extracting latent representations from long sequences",
